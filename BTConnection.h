@@ -18,6 +18,8 @@ public:
 
 	virtual DWORD GetExtended(DWORD dwUserIndex, SCP_EXTN* pPressure);
 
+	virtual DWORD GetCustomData(DWORD dwUserIndex, DWORD Type, void* pData);
+
 	// UNDOCUMENTED
 
 	virtual DWORD GetStateEx(DWORD dwUserIndex, XINPUT_STATE *pState);
@@ -30,6 +32,7 @@ protected:
 	XINPUT_STATE     m_padState     [4];
 	XINPUT_VIBRATION m_padVibration [4];
 	SCP_EXTN		 m_Extended     [4];
+	SCP_DS3_ACCEL	 m_Accel        [4];
 
 	volatile bool	 m_bInited, m_bConnected;
 

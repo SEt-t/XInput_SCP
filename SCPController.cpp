@@ -228,6 +228,11 @@ DWORD CSCPController::GetExtended(DWORD dwUserIndex, SCP_EXTN* pPressure)
 	return m_xConnected ? ERROR_SUCCESS : ERROR_DEVICE_NOT_CONNECTED;;
 }
 
+DWORD CSCPController::GetCustomData(DWORD dwUserIndex, DWORD Type, void* pData)
+{
+	return m_xConnected ? ERROR_NOT_SUPPORTED : ERROR_DEVICE_NOT_CONNECTED;;
+}
+
 
 BOOL CSCPController::Reopen(void)
 {

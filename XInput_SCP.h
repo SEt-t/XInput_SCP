@@ -35,4 +35,12 @@ typedef struct
 
 } SCP_EXTN;
 
+typedef struct
+{
+	unsigned short SCP_ACCEL_X;
+	unsigned short SCP_ACCEL_Z;
+	unsigned short SCP_ACCEL_Y;
+	unsigned short SCP_GYRO;
+} SCP_DS3_ACCEL;
+
 DWORD WINAPI XInputGetExtended(DWORD dwUserIndex, SCP_EXTN* pPressure);

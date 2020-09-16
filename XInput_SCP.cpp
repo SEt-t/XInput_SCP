@@ -299,6 +299,27 @@ DWORD WINAPI XInputGetExtended(DWORD dwUserIndex, SCP_EXTN* pPressure)
 	return ERROR_NOT_SUPPORTED;
 }
 
+DWORD WINAPI XInputGetCustomData(DWORD dwUserIndex, DWORD Type, void* pData)
+{
+	if (l_bUnloaded) return ERROR_DEVICE_NOT_CONNECTED;
+
+	if (!l_bStarted) LoadApi(true);
+
+	if (!l_bPassThrough)
+	{
+		if (dwUserIndex < l_nPads)
+		{
+			return l_Pad[dwUserIndex]->GetCustomData(dwUserIndex, Type, pData);
+		}
+		else
+		{
+			return ERROR_DEVICE_NOT_CONNECTED;
+		}
+	}
+
+	return ERROR_NOT_SUPPORTED;
+}
+
 // UNDOCUMENTED
 
 DWORD WINAPI XInputGetStateEx(DWORD dwUserIndex, XINPUT_STATE* pState)

@@ -57,6 +57,8 @@ public:
 
 	virtual DWORD GetExtended(DWORD dwUserIndex, SCP_EXTN* pPressure);
 
+	virtual DWORD GetCustomData(DWORD dwUserIndex, DWORD Type, void* pData);
+
 	// UNDOCUMENTED
 
 	virtual DWORD GetStateEx(DWORD dwUserIndex, XINPUT_STATE *pState);

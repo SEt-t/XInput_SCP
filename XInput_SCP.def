@@ -10,6 +10,7 @@ EXPORTS
 	XInputGetBatteryInformation		@7
 	XInputGetKeystroke				@8
 	XInputGetExtended				@9
+	XInputGetCustomData				@10
 
 	; Undocumented
 	XInputGetStateEx				@100

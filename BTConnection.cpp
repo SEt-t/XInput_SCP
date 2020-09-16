@@ -1,5 +1,7 @@
 #include "StdAfx.h"
 
+static const SCP_DS3_ACCEL default_accel = {512, 512, 400, 512};
+
 CBTConnection::CBTConnection(void)
 {
     WSADATA wsaData;
@@ -22,6 +24,7 @@ CBTConnection::CBTConnection(void)
 		memset(&(m_padState    [Index]), 0, sizeof(XINPUT_STATE));
 		memset(&(m_padVibration[Index]), 0, sizeof(XINPUT_VIBRATION));
 		memset(&(m_Extended    [Index]), 0, sizeof(SCP_EXTN));
+		m_Accel[Index] = default_accel;
 	}
 
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) == NO_ERROR) 
@@ -162,6 +165,7 @@ void CBTConnection::ReadThread(void *lpController)
 				memset(&(Pad->m_padState    [Buffer[0]]), 0, sizeof(XINPUT_STATE));
 				memset(&(Pad->m_padVibration[Buffer[0]]), 0, sizeof(XINPUT_VIBRATION));
 				memset(&(Pad->m_Extended    [Buffer[0]]), 0, sizeof(SCP_EXTN));
+				Pad->m_Accel[Buffer[0]] = default_accel;
 			}
 		}
 		else
@@ -239,6 +243,11 @@ void CBTConnection::XInputMapState(DWORD Pad, UCHAR* Report, UCHAR Model)
 		m_Extended[Pad].SCP_START  = m_padState[Pad].Gamepad.wButtons & XINPUT_GAMEPAD_START       ? 1.0f : 0.0f;
 
 		m_Extended[Pad].SCP_PS     = m_padState[Pad].Gamepad.wButtons & XINPUT_GAMEPAD_GUIDE       ? 1.0f : 0.0f;
+
+		m_Accel[Pad].SCP_ACCEL_X = 0x400-_byteswap_ushort(*(unsigned short*)&Report[41]);
+		m_Accel[Pad].SCP_ACCEL_Z =       _byteswap_ushort(*(unsigned short*)&Report[43]);
+		m_Accel[Pad].SCP_ACCEL_Y =       _byteswap_ushort(*(unsigned short*)&Report[45]);
+		m_Accel[Pad].SCP_GYRO    = 0x400-_byteswap_ushort(*(unsigned short*)&Report[47]);
 	}
 
 	if (Model == 2)  // DS4
@@ -343,7 +352,21 @@ DWORD CBTConnection::GetExtended(DWORD dwUserIndex, SCP_EXTN* pPressure)
 		memcpy(pPressure, &m_Extended[dwUserIndex], sizeof(SCP_EXTN));
 	}
 
-	return m_bConnected ? ERROR_SUCCESS : ERROR_DEVICE_NOT_CONNECTED;;
+	return m_bConnected ? ERROR_SUCCESS : ERROR_DEVICE_NOT_CONNECTED;
+}
+
+DWORD CBTConnection::GetCustomData(DWORD dwUserIndex, DWORD Type, void* pData)
+{
+	if (!m_bConnected)
+		return ERROR_DEVICE_NOT_CONNECTED;;
+
+	if (!Type)
+	{
+		memcpy(pData, &m_Accel[dwUserIndex], sizeof(SCP_DS3_ACCEL));
+		return ERROR_SUCCESS;
+	}
+
+	return ERROR_NOT_SUPPORTED;
 }
 
 // UNDOCUMENTED
