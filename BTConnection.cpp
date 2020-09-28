@@ -1,9 +1,12 @@
 #include "StdAfx.h"
+#include <intrin.h>
 
 static const SCP_DS3_ACCEL default_accel = {512, 512, 400, 512};
 
 CBTConnection::CBTConnection(void)
 {
+	m_hEvent = INVALID_HANDLE_VALUE;
+	m_hThread = INVALID_HANDLE_VALUE;
     WSADATA wsaData;
 
 	CollectionSize = 0;
@@ -75,7 +78,7 @@ BOOL CBTConnection::Open()
 	{
 		CollectionSize = 0;
 
-		if (send(m_Control, (CHAR*) Buffer, 6, 0) != SOCKET_ERROR) 
+		if (send(m_Control, (CHAR*) Buffer, 6, 0) != SOCKET_ERROR)
 		{
 			if (recv(m_Control, (CHAR*) Buffer, 6, 0) > 0)
 			{
@@ -85,16 +88,19 @@ BOOL CBTConnection::Open()
 				}
 			}
 		}
+
+		if (CollectionSize > 0)
+		{
+			m_bConnected = m_xConnected = true;
+
+			m_hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+			m_hThread = CreateThread(NULL, 0, ReadThread, this, 0, NULL);
+		}
+
+		return CollectionSize > 0;
 	}
-
-	if (CollectionSize > 0)
-	{
-		m_bConnected = m_xConnected = true;
-
-		_beginthread(ReadThread, 0, this);
-	}
-
-	return CollectionSize > 0;
+	else
+		return FALSE;
 }
 
 BOOL CBTConnection::Close()
@@ -113,6 +119,13 @@ BOOL CBTConnection::Close()
 		catch (...)
 		{
 		}
+
+		HANDLE Handles[2] = {m_hEvent, m_hThread};
+		WaitForMultipleObjects(2, Handles, FALSE, INFINITE);
+		CloseHandle(m_hEvent);
+		CloseHandle(m_hThread);
+		m_hEvent = INVALID_HANDLE_VALUE;
+		m_hThread = INVALID_HANDLE_VALUE;
 	}
 
 	return !m_bConnected;
@@ -146,7 +159,22 @@ BOOL CBTConnection::Read(UCHAR* Buffer)
 	return bRead > 0;
 }
 
-void CBTConnection::ReadThread(void *lpController)
+#ifdef _M_IX86
+void __declspec(noinline) SignalAndExit(void *_ExitThread, HANDLE hEvent)
+{
+	*((void**)_AddressOfReturnAddress()) = SetEvent;
+}
+#elif defined(_M_X64) && defined(NDEBUG)
+BOOL __declspec(noinline) SignalAndExit(HANDLE hEvent)
+{
+	void **p = (void**)_AddressOfReturnAddress();
+	p[0] = GetCurrentThread;
+	p[1] = ExitThread;
+	return SetEvent(hEvent);
+}
+#endif
+
+DWORD WINAPI CBTConnection::ReadThread(void *lpController)
 {
 	CBTConnection* Pad = (CBTConnection *) lpController;
 
@@ -174,7 +202,18 @@ void CBTConnection::ReadThread(void *lpController)
 		}
 	}
 
-	_endthread();
+	// HACK: need to ensure that code is still alive between SetEvent and ExitThread calls even when DLL is already unloaded
+#ifdef _M_IX86
+	SignalAndExit(ExitThread, Pad->m_hEvent);
+	return (DWORD)(DWORD_PTR)&SignalAndExit; // prevent compiler optimizing away function arguments
+#elif defined(_M_X64) && defined(NDEBUG)
+	return SignalAndExit(Pad->m_hEvent); // requires compiler optimizing SetEvent call into jmp
+#else
+	// unsafe code: will crash if DLL is unloaded during this call
+	SetEvent(Pad->m_hEvent);
+	ExitThread(0);
+	return 0;
+#endif
 }
 
 void CBTConnection::XInputMapState(DWORD Pad, UCHAR* Report, UCHAR Model)

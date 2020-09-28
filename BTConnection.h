@@ -38,6 +38,8 @@ protected:
 
 	SOCKET m_Control;
 	SOCKET m_Report;
+	HANDLE m_hEvent;
+	HANDLE m_hThread;
 
 	virtual void Report(DWORD dwUserIndex);
 
@@ -45,5 +47,5 @@ protected:
 
 	virtual BOOL Read(UCHAR* Buffer);
 
-	static void ReadThread(void *lpController);
+	static DWORD WINAPI ReadThread(void *lpController);
 };
